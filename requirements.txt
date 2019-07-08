@@ -1,0 +1,6 @@
+Flask
+firebase-admin
+google-auth
+requests
+gunicorn
+schematics

@@ -1,0 +1,124 @@
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Submit a form</title>
+    <script src="https://www.gstatic.com/firebasejs/5.4.1/firebase-app.js"></script>
+    <!-- Add additional services that you want to use -->
+    <script src="https://www.gstatic.com/firebasejs/5.4.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/5.4.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/5.4.1/firebase-firestore.js"></script>
+    <script defer src="https://iquis-test-8eee2.firebaseapp.com/__/firebase/init.js"></script>
+
+    <script src="https://cdn.firebase.com/libs/firebaseui/2.5.1/firebaseui.js"></script>
+    <link rel="stylesheet" href="https://cdn.firebase.com/libs/firebaseui/2.5.1/firebaseui.css" />
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <link type="text/css" rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+  </head>
+  <body>
+    <button id="logout">logout</button>
+    <h3>User:{{user}}</h3>
+    <h3>Error:{{err}}</h3>
+    <ul>
+      {% for entity in res %}
+      <li>{{entity.id}} / {{entity.to_dict()}}</li>
+      {% endfor %}
+    </ul>
+    <div id="container">
+      <div class="pagetitle">
+        <h1>Submit a form</h1>
+      </div>
+      <div id="main">
+        <form method="post" action="{{ url_for('hello') }}">
+          <label for="name">Name:</label>
+          <input type="text" name="name"><br />
+          <label for="email">Email address:</label>
+          <input type="email" name="email"><br />
+          <label for="site_url">category(number csv):</label>
+          <input type="text" name="category"><br />
+          <input type="submit" name="submit" value="regist">
+        </form>
+        <form method="post" action="{{ url_for('hello') }}">
+          <label for="comments">search_cat(number):</label>
+          <input type="text" name="search_cat"><br />
+          <input type="submit" name="submit" value="search">
+        </form>
+      </div>
+    </div>
+
+    <dialog id="auth" class="mdl-dialog" style="width:360px;">
+      <h4>Welcome to Test App</h4>
+      <div id="firebaseui-auth-container"></div>
+    </dialog>
+
+    <script>
+      var uid;
+      var email;
+      var displayName;
+      var db;
+      var backendHostUrl = '{{SERVER_NAME}}';
+
+      document.addEventListener('DOMContentLoaded', function() {
+          try {
+              const ui = new firebaseui.auth.AuthUI(firebase.auth());
+              ui.start('#firebaseui-auth-container', {
+                signInOptions: [
+                  firebase.auth.EmailAuthProvider.PROVIDER_ID,
+                  firebase.auth.GoogleAuthProvider.PROVIDER_ID,
+                ],
+              });
+              firebase.auth().onAuthStateChanged(function(user) {
+                let authWindow = document.getElementById('auth') // ログインウィンドウ
+
+                if(user) {
+                  authWindow.close()
+                  console.log(user);
+
+                  uid = user.uid;
+                  email = user.email;
+                  displayName = user.displayName;
+                  const providerId = user.providerData[0].providerId;
+                  firebase.auth().currentUser.getIdToken(true).then(function(idToken) {
+                    var request = new XMLHttpRequest();
+                    request.open('POST', backendHostUrl + '/tokn');
+                    request.setRequestHeader('Authorization', 'Bearer '+idToken);
+                    request.onReadyStateChange = function () {
+                        if (request.readyState != 4) {
+                            console.log('reqest...');
+                        } else if (request.status != 200) {
+                            alert('Error');
+                        } else {
+                            var res = request.responseText;
+                            console.log('success');
+                            console.log(res);
+                        }
+                    };
+                    request.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                    request.send();
+                  }).catch(function(error) {
+                    alert(error);
+                  });
+                } else {
+                  authWindow.showModal()
+                }
+              });
+              document.getElementById('logout').addEventListener("click", function(){
+                  firebase.auth().signOut();
+              });
+              db = firebase.firestore();
+              db.collection("Hoge").get().then((querySnapshot) => {
+                  querySnapshot.forEach((doc) => {
+                      console.log(`${doc.id} => ${doc.data()}`);
+                  });
+              });
+
+          } catch (e) {
+              console.error(e);
+              document.getElementById('log').innerHTML = 'Error loading the Firebase SDK, check the console.';
+          }
+      });
+    </script>
+  </body>
+</html>
